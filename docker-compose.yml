@@ -1,0 +1,13 @@
+name: cms-api-python-flatfile
+
+services:
+  app:
+    container_name: cms-api-python-flatfile
+    build: .
+    ports:
+      - "3004:3004"
+    volumes:
+      - ./data:/app/data
+    environment:
+      PORT: "3004"
+      DATA_DIR: /app/data

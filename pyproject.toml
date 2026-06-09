@@ -1,0 +1,8 @@
+[project]
+name = "cms-api-python-flatfile"
+version = "0.1.0"
+description = "Standalone schema.org-aligned CMS API on Python — no runtime dependencies."
+readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "Eric Binek" }]
+requires-python = ">=3.14"
