@@ -11,3 +11,5 @@ services:
     environment:
       PORT: "3004"
       DATA_DIR: /app/data
+      ADMIN_USER: "${ADMIN_USER:-}"
+      ADMIN_PASSWORD: "${ADMIN_PASSWORD:-}"

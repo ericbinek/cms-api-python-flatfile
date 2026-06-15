@@ -1,6 +1,6 @@
 # Contributing to cms-api-python-flatfile
 
-Thanks for taking a look. This is a build-in-public project at version 0.1.0, so it is still moving and contributions of every kind are welcome: bug reports, questions, ideas, and code.
+Thanks for taking a look. This is a build-in-public project at version 0.2.0, so it is still moving and contributions of every kind are welcome: bug reports, questions, ideas, and code.
 
 ## Ground rules
 

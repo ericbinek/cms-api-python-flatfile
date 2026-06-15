@@ -10,6 +10,7 @@ import tempfile
 import time
 import urllib.error
 import urllib.request
+import uuid
 from pathlib import Path
 
 from app.models import blog_posting as _blog_posting_mod
@@ -22,6 +23,8 @@ from app.models import defined_term as _defined_term_mod
 from app.models import defined_term_set as _defined_term_set_mod
 from app.models import comment as _comment_mod
 from app.models import web_site as _web_site_mod
+from app.models.account import hash_password
+from app.access import READONLY_FIELDS
 
 MODELS = {
     "BlogPosting": _blog_posting_mod,
@@ -40,6 +43,22 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 
 _server = None
 
+# Auth is mandatory on writes. The entity suite drives the API as an admin (who
+# sees and may do everything), so the CRUD contract is exercised unchanged. The
+# active bearer token is module scoped so the request helpers attach it without
+# threading it through every call.
+DEFAULT_ADMIN = {"username": "admin", "password": "bootstrap-admin-secret", "role": "admin"}
+_auth_token = None
+
+
+def set_auth_token(token):
+    global _auth_token
+    _auth_token = token
+
+
+def _account_record(spec):
+    return {"id": str(uuid.uuid4()), "username": spec["username"], "passwordHash": hash_password(spec["password"]), "role": spec["role"]}
+
 
 def _free_port():
     while True:
@@ -53,19 +72,35 @@ def _free_port():
 
 
 class _Server:
-    def __init__(self):
+    # Starts a fresh server against a temp data dir. By default the account store
+    # is seeded with one admin and the server carries that admin's token. Pass
+    # accounts=[...] to seed a specific set, or env={"ADMIN_USER": ...} to exercise
+    # the env bootstrap (no store written).
+    def __init__(self, accounts=None, env=None):
         self.port = _free_port()
         self.data_dir = tempfile.mkdtemp(prefix="cms-test-py-")
-        env = {**os.environ, "PORT": str(self.port), "DATA_DIR": self.data_dir, "PYTHONPATH": str(REPO_ROOT)}
+
+        seed = accounts
+        if seed is None and env is None:
+            seed = [DEFAULT_ADMIN]
+        if seed is not None:
+            with open(os.path.join(self.data_dir, "accounts.json"), "w", encoding="utf-8") as f:
+                json.dump([_account_record(a) for a in seed], f, indent=2, ensure_ascii=False)
+
+        proc_env = {**os.environ, "PORT": str(self.port), "DATA_DIR": self.data_dir, "PYTHONPATH": str(REPO_ROOT)}
+        proc_env.update(env or {})
         self.proc = subprocess.Popen(
             [sys.executable, "-m", "app"],
             cwd=str(REPO_ROOT),
-            env=env,
+            env=proc_env,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )
         self.base_url = f"http://127.0.0.1:{self.port}"
         self._wait_for_health()
+
+        admin = next((a for a in (seed or []) if a["role"] == "admin"), None)
+        self.token = login(self, admin["username"], admin["password"]) if admin else None
 
     def _wait_for_health(self):
         deadline = time.time() + 10
@@ -91,10 +126,22 @@ class _Server:
         shutil.rmtree(self.data_dir, ignore_errors=True)
 
 
+def start_server(accounts=None, env=None):
+    return _Server(accounts=accounts, env=env)
+
+
+def login(server, username, password):
+    r = request_json(server, "POST", "/auth/login", {"username": username, "password": password}, no_auth=True)
+    if r["status"] != 200:
+        raise RuntimeError(f"login({username}) failed with {r['status']}: {r['raw']}")
+    return r["body"]["token"]
+
+
 def get_server():
-    global _server
+    global _server, _auth_token
     if _server is None:
         _server = _Server()
+        _auth_token = _server.token
         atexit.register(_server.stop)
     return _server
 
@@ -135,9 +182,13 @@ def _plural(entity):
 
 
 def build_payload(server, entity, partial=False):
+    # System and internal fields (READONLY_FIELDS) are never sent — they are not
+    # client writable and would be rejected with 400.
     mod = MODELS[entity]
     payload = {}
     for name, spec in mod.FIELDS.items():
+        if name in READONLY_FIELDS:
+            continue
         if not partial and name not in mod.REQUIRED_FIELDS:
             continue
         if spec["kind"] == "ref":
@@ -148,10 +199,18 @@ def build_payload(server, entity, partial=False):
     return payload
 
 
-def request_json(server, method, path, body=None, headers=None, raw_body=None):
+def post_entity(server, entity, payload):
+    return request_json(server, "POST", "/" + _plural(entity), payload)
+
+
+def request_json(server, method, path, body=None, headers=None, raw_body=None, no_auth=False):
     url = server.base_url + path
     data = None
     final_headers = {"Accept": "application/json"}
+    # Attach the active bearer token unless opted out or the caller set their own
+    # Authorization header (caller headers win on conflict).
+    if not no_auth and _auth_token is not None:
+        final_headers["Authorization"] = f"Bearer {_auth_token}"
     if raw_body is not None:
         data = raw_body.encode("utf-8") if isinstance(raw_body, str) else raw_body
         final_headers["Content-Type"] = "application/json"

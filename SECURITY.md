@@ -1,6 +1,6 @@
 # Security Policy
 
-This is a build-in-public project at version 0.1.0. It is not production
+This is a build-in-public project at version 0.2.0. It is not production
 software and the README says so, but security reports are still welcome
 and taken seriously.
 

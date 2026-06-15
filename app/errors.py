@@ -14,6 +14,14 @@ def invalid_id(path):
     return _build(400, "INVALID_ID", "ID must be a valid UUID.", [], path)
 
 
+def unauthorized(path):
+    return _build(401, "UNAUTHORIZED", "Authentication is required, or the session is invalid or expired.", [], path)
+
+
+def forbidden(message, path):
+    return _build(403, "FORBIDDEN", message or "You do not have permission to perform this operation.", [], path)
+
+
 def not_found(resource, path):
     return _build(404, "NOT_FOUND", f"{resource} not found.", [], path)
 

@@ -7,6 +7,9 @@ from urllib.parse import urlparse
 
 from app import http as cms_http
 from app import errors as cms_errors
+from app import auth as cms_auth
+from app.models import account as account_model
+from app.routers import auth as auth_router
 from app.routers import blog_posting as blog_posting_router
 from app.routers import person as person_router
 from app.routers import web_page as web_page_router
@@ -64,10 +67,26 @@ class CmsHandler(BaseHTTPRequestHandler):
             if method == "GET" and path == "/health":
                 cms_http.json_response(self, 200, {"status": "ok"})
                 return
+
+            # Auth middleware: resolve the principal before routing. A presented
+            # but invalid credential is 401; no credential is the anonymous one.
+            principal = cms_auth.resolve_principal(self)
+
+            if path == "/auth" or path.startswith("/auth/"):
+                if auth_router.handle(self, method, path, url, request_path, principal):
+                    return
+
+            # Writes require a session — no role grants anonymous writes (401, not 403).
+            if cms_auth.requires_session(method, principal):
+                cms_http.json_error(self, cms_errors.unauthorized(request_path))
+                return
+
             for router in ROUTERS:
-                if router.handle(self, method, path, url, request_path):
+                if router.handle(self, method, path, url, request_path, principal):
                     return
             cms_http.json_error(self, cms_errors.route_not_found(request_path))
+        except cms_auth.UnauthorizedError:
+            cms_http.json_error(self, cms_errors.unauthorized(request_path))
         except cms_http.BodyTooLargeError:
             cms_http.json_error(self, cms_errors.payload_too_large(request_path))
         except cms_http.UnsupportedMediaTypeError:
@@ -109,6 +128,8 @@ class CmsHandler(BaseHTTPRequestHandler):
 def main():
     port = int(os.environ.get("PORT", "3004"))
     host = os.environ.get("HOST", "0.0.0.0")
+    # Bootstrap the first admin (if configured) before accepting requests.
+    account_model.seed_admin()
     server = ThreadingHTTPServer((host, port), CmsHandler)
     print(f"CMS API running at http://{host}:{port}", file=sys.stderr)
     try:
