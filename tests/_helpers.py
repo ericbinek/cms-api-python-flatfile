@@ -15,28 +15,36 @@ from pathlib import Path
 
 from app.models import blog_posting as _blog_posting_mod
 from app.models import person as _person_mod
+from app.models import organization as _organization_mod
 from app.models import web_page as _web_page_mod
 from app.models import image_object as _image_object_mod
+from app.models import video_object as _video_object_mod
+from app.models import audio_object as _audio_object_mod
 from app.models import category_code as _category_code_mod
 from app.models import category_code_set as _category_code_set_mod
 from app.models import defined_term as _defined_term_mod
 from app.models import defined_term_set as _defined_term_set_mod
 from app.models import comment as _comment_mod
 from app.models import web_site as _web_site_mod
+from app.models import site_navigation_element as _site_navigation_element_mod
 from app.models.account import hash_password
 from app.access import READONLY_FIELDS
 
 MODELS = {
     "BlogPosting": _blog_posting_mod,
     "Person": _person_mod,
+    "Organization": _organization_mod,
     "WebPage": _web_page_mod,
     "ImageObject": _image_object_mod,
+    "VideoObject": _video_object_mod,
+    "AudioObject": _audio_object_mod,
     "CategoryCode": _category_code_mod,
     "CategoryCodeSet": _category_code_set_mod,
     "DefinedTerm": _defined_term_mod,
     "DefinedTermSet": _defined_term_set_mod,
     "Comment": _comment_mod,
     "WebSite": _web_site_mod,
+    "SiteNavigationElement": _site_navigation_element_mod,
 }
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -141,8 +149,11 @@ def get_server():
     global _server, _auth_token
     if _server is None:
         _server = _Server()
-        _auth_token = _server.token
         atexit.register(_server.stop)
+    # Reset the active token on every call, not just first init. Other modules
+    # (auth conformance) point the module-scoped token at their own server; each
+    # class re-binds it to the shared server's admin token in setUpClass.
+    _auth_token = _server.token
     return _server
 
 

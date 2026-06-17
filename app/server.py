@@ -12,26 +12,34 @@ from app.models import account as account_model
 from app.routers import auth as auth_router
 from app.routers import blog_posting as blog_posting_router
 from app.routers import person as person_router
+from app.routers import organization as organization_router
 from app.routers import web_page as web_page_router
 from app.routers import image_object as image_object_router
+from app.routers import video_object as video_object_router
+from app.routers import audio_object as audio_object_router
 from app.routers import category_code as category_code_router
 from app.routers import category_code_set as category_code_set_router
 from app.routers import defined_term as defined_term_router
 from app.routers import defined_term_set as defined_term_set_router
 from app.routers import comment as comment_router
 from app.routers import web_site as web_site_router
+from app.routers import site_navigation_element as site_navigation_element_router
 
 ROUTERS = [
     blog_posting_router,
     person_router,
+    organization_router,
     web_page_router,
     image_object_router,
+    video_object_router,
+    audio_object_router,
     category_code_router,
     category_code_set_router,
     defined_term_router,
     defined_term_set_router,
     comment_router,
     web_site_router,
+    site_navigation_element_router,
 ]
 
 

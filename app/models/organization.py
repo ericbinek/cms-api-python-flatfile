@@ -13,21 +13,25 @@ from app.validation import (
     normalize_uuid,
 )
 
-TYPE_NAME = "WebSite"
-COLLECTION_FILE = "web-sites.json"
+TYPE_NAME = "Organization"
+COLLECTION_FILE = "organizations.json"
 
 FIELDS = {
         "name": {"kind": "scalar", "type": "Text", "cardinality": "one"},
+        "legalName": {"kind": "scalar", "type": "Text", "cardinality": "one"},
         "description": {"kind": "scalar", "type": "Text", "cardinality": "one"},
         "url": {"kind": "scalar", "type": "URL", "cardinality": "one"},
-        "inLanguage": {"kind": "embed", "type": "Language", "cardinality": "one"},
-        "image": {"kind": "ref", "targets": ["ImageObject"], "cardinality": "one"},
-        "publisher": {"kind": "ref", "targets": ["Organization"], "cardinality": "one"},
+        "email": {"kind": "scalar", "type": "Text", "cardinality": "one"},
+        "telephone": {"kind": "scalar", "type": "Text", "cardinality": "one"},
+        "logo": {"kind": "ref", "targets": ["ImageObject"], "cardinality": "one"},
+        "foundingDate": {"kind": "scalar", "type": "Date", "cardinality": "one"},
+        "sameAs": {"kind": "scalar", "type": "URL", "cardinality": "many"},
+        "parentOrganization": {"kind": "ref", "targets": ["Organization"], "cardinality": "one"},
     }
 
-REQUIRED_FIELDS = {"name", "url"}
-SEARCHABLE_FIELDS = {"name", "description"}
-SORTABLE_FIELDS = {"dateCreated", "dateModified", "name", "description", "url"}
+REQUIRED_FIELDS = {"name"}
+SEARCHABLE_FIELDS = {"name", "legalName", "description", "email", "telephone"}
+SORTABLE_FIELDS = {"dateCreated", "dateModified", "name", "legalName", "description", "url", "email", "telephone", "foundingDate"}
 
 SYSTEM_FIELDS = {"id", "dateCreated", "dateModified", "@context", "@type"}
 

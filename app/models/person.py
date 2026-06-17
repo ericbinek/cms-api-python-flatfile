@@ -25,6 +25,7 @@ FIELDS = {
         "url": {"kind": "scalar", "type": "URL", "cardinality": "one"},
         "description": {"kind": "scalar", "type": "Text", "cardinality": "one"},
         "image": {"kind": "ref", "targets": ["ImageObject"], "cardinality": "one"},
+        "worksFor": {"kind": "ref", "targets": ["Organization"], "cardinality": "one"},
         "jobTitle": {"kind": "scalar", "type": "Text", "cardinality": "one"},
         "sameAs": {"kind": "scalar", "type": "URL", "cardinality": "many"},
     }
@@ -35,7 +36,7 @@ SORTABLE_FIELDS = {"dateCreated", "dateModified", "name", "givenName", "familyNa
 
 SYSTEM_FIELDS = {"id", "dateCreated", "dateModified", "@context", "@type"}
 
-REF_COLLECTIONS = {"ImageObject": "image-objects.json"}
+REF_COLLECTIONS = {"ImageObject": "image-objects.json", "Organization": "organizations.json"}
 
 
 def _is_empty(value):

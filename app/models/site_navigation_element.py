@@ -13,25 +13,24 @@ from app.validation import (
     normalize_uuid,
 )
 
-TYPE_NAME = "WebSite"
-COLLECTION_FILE = "web-sites.json"
+TYPE_NAME = "SiteNavigationElement"
+COLLECTION_FILE = "site-navigation-elements.json"
 
 FIELDS = {
         "name": {"kind": "scalar", "type": "Text", "cardinality": "one"},
-        "description": {"kind": "scalar", "type": "Text", "cardinality": "one"},
         "url": {"kind": "scalar", "type": "URL", "cardinality": "one"},
-        "inLanguage": {"kind": "embed", "type": "Language", "cardinality": "one"},
-        "image": {"kind": "ref", "targets": ["ImageObject"], "cardinality": "one"},
-        "publisher": {"kind": "ref", "targets": ["Organization"], "cardinality": "one"},
+        "description": {"kind": "scalar", "type": "Text", "cardinality": "one"},
+        "position": {"kind": "scalar", "type": "Integer", "cardinality": "one"},
+        "isPartOf": {"kind": "ref", "targets": ["SiteNavigationElement"], "cardinality": "one"},
     }
 
 REQUIRED_FIELDS = {"name", "url"}
 SEARCHABLE_FIELDS = {"name", "description"}
-SORTABLE_FIELDS = {"dateCreated", "dateModified", "name", "description", "url"}
+SORTABLE_FIELDS = {"dateCreated", "dateModified", "name", "url", "description", "position"}
 
 SYSTEM_FIELDS = {"id", "dateCreated", "dateModified", "@context", "@type"}
 
-REF_COLLECTIONS = {"ImageObject": "image-objects.json", "Organization": "organizations.json"}
+REF_COLLECTIONS = {"SiteNavigationElement": "site-navigation-elements.json"}
 
 
 def _is_empty(value):

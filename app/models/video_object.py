@@ -13,25 +13,32 @@ from app.validation import (
     normalize_uuid,
 )
 
-TYPE_NAME = "WebSite"
-COLLECTION_FILE = "web-sites.json"
+TYPE_NAME = "VideoObject"
+COLLECTION_FILE = "video-objects.json"
 
 FIELDS = {
         "name": {"kind": "scalar", "type": "Text", "cardinality": "one"},
         "description": {"kind": "scalar", "type": "Text", "cardinality": "one"},
-        "url": {"kind": "scalar", "type": "URL", "cardinality": "one"},
-        "inLanguage": {"kind": "embed", "type": "Language", "cardinality": "one"},
-        "image": {"kind": "ref", "targets": ["ImageObject"], "cardinality": "one"},
-        "publisher": {"kind": "ref", "targets": ["Organization"], "cardinality": "one"},
+        "contentUrl": {"kind": "scalar", "type": "URL", "cardinality": "one"},
+        "embedUrl": {"kind": "scalar", "type": "URL", "cardinality": "one"},
+        "encodingFormat": {"kind": "scalar", "type": "Text", "cardinality": "one"},
+        "duration": {"kind": "scalar", "type": "Duration", "cardinality": "one"},
+        "videoQuality": {"kind": "scalar", "type": "Text", "cardinality": "one"},
+        "transcript": {"kind": "scalar", "type": "Text", "cardinality": "one"},
+        "caption": {"kind": "scalar", "type": "Text", "cardinality": "one"},
+        "uploadDate": {"kind": "scalar", "type": "DateTime", "cardinality": "one"},
+        "creator": {"kind": "ref", "targets": ["Person"], "cardinality": "one"},
+        "thumbnail": {"kind": "ref", "targets": ["ImageObject"], "cardinality": "one"},
+        "productionCompany": {"kind": "ref", "targets": ["Organization"], "cardinality": "one"},
     }
 
-REQUIRED_FIELDS = {"name", "url"}
-SEARCHABLE_FIELDS = {"name", "description"}
-SORTABLE_FIELDS = {"dateCreated", "dateModified", "name", "description", "url"}
+REQUIRED_FIELDS = {"contentUrl"}
+SEARCHABLE_FIELDS = {"name", "description", "encodingFormat", "videoQuality", "transcript", "caption"}
+SORTABLE_FIELDS = {"dateCreated", "dateModified", "name", "description", "contentUrl", "embedUrl", "encodingFormat", "duration", "videoQuality", "transcript", "caption", "uploadDate"}
 
 SYSTEM_FIELDS = {"id", "dateCreated", "dateModified", "@context", "@type"}
 
-REF_COLLECTIONS = {"ImageObject": "image-objects.json", "Organization": "organizations.json"}
+REF_COLLECTIONS = {"Person": "persons.json", "ImageObject": "image-objects.json", "Organization": "organizations.json"}
 
 
 def _is_empty(value):
