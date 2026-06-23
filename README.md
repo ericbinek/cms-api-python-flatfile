@@ -2,7 +2,7 @@
 
 [![Tests](https://github.com/ericbinek/cms-api-python-flatfile/actions/workflows/test.yml/badge.svg)](https://github.com/ericbinek/cms-api-python-flatfile/actions/workflows/test.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-![Version](https://img.shields.io/badge/version-0.3.0-blue.svg)
+![Version](https://img.shields.io/badge/version-0.4.0-blue.svg)
 ![Status](https://img.shields.io/badge/status-work_in_progress-orange.svg)
 ![Build in public](https://img.shields.io/badge/build-in_public-ff69b4.svg)
 ![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)
@@ -16,7 +16,7 @@ It exposes CRUD endpoints for 14 schema.org entity types such as BlogPosting, Pe
 
 A conformance test suite defines the HTTP contract.
 
-## Status: work in progress (v0.3.0)
+## Status: work in progress (v0.4.0)
 
 This is an ongoing build-in-public project, shared only for community and communication purposes. Do not deploy it in production. Do not rely on its interfaces or data format remaining stable.
 

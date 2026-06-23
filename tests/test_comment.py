@@ -129,6 +129,40 @@ class CommentApiTest(unittest.TestCase):
         self.assertEqual(r["status"], 400)
         self.assertEqual(r["body"]["error"], "INVALID_JSON")
 
+    def test_leading_trailing_whitespace_trimmed_on_create(self):
+        payload = build_payload(self.server, ENTITY)
+        payload["text"] = "  trimmed value  "
+        r = request_json(self.server, "POST", BASE, payload)
+        self.assertEqual(r["status"], 201, f"expected 201: {r['raw']}")
+        self.assertEqual(r["body"]["text"], "trimmed value")
+
+    def test_control_characters_stripped_on_create(self):
+        payload = build_payload(self.server, ENTITY)
+        payload["text"] = "clean\x00\x07ed"
+        r = request_json(self.server, "POST", BASE, payload)
+        self.assertEqual(r["status"], 201, f"expected 201: {r['raw']}")
+        self.assertEqual(r["body"]["text"], "cleaned")
+
+    def test_value_over_max_length_rejected_with_400(self):
+        payload = build_payload(self.server, ENTITY)
+        payload["text"] = "a" * 10001
+        r = request_json(self.server, "POST", BASE, payload)
+        self.assertEqual(r["status"], 400)
+        self.assertEqual(r["body"]["error"], "VALIDATION_ERROR")
+
+    def test_value_at_max_length_accepted(self):
+        payload = build_payload(self.server, ENTITY)
+        payload["text"] = "a" * 10000
+        r = request_json(self.server, "POST", BASE, payload)
+        self.assertEqual(r["status"], 201, f"expected 201: {r['raw']}")
+
+    def test_multiline_field_text_keeps_newlines(self):
+        payload = build_payload(self.server, ENTITY)
+        payload["text"] = "first line\nsecond line"
+        r = request_json(self.server, "POST", BASE, payload)
+        self.assertEqual(r["status"], 201, f"expected 201: {r['raw']}")
+        self.assertEqual(r["body"]["text"], "first line\nsecond line")
+
     def test_get_by_id_embeds_author_object_list_stays_flat(self):
         payload = build_payload(self.server, ENTITY, partial=True)
         created = request_json(self.server, "POST", BASE, payload)["body"]

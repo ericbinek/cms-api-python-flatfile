@@ -11,20 +11,21 @@ from app.validation import (
     is_embed,
     is_valid_uuid,
     normalize_uuid,
+    sanitize_string,
 )
 
 TYPE_NAME = "ImageObject"
 COLLECTION_FILE = "image-objects.json"
 
 FIELDS = {
-        "name": {"kind": "scalar", "type": "Text", "cardinality": "one"},
-        "caption": {"kind": "scalar", "type": "Text", "cardinality": "one"},
-        "description": {"kind": "scalar", "type": "Text", "cardinality": "one"},
-        "contentUrl": {"kind": "scalar", "type": "URL", "cardinality": "one"},
-        "encodingFormat": {"kind": "scalar", "type": "Text", "cardinality": "one"},
+        "name": {"kind": "scalar", "type": "Text", "cardinality": "one", "maxLength": 256},
+        "caption": {"kind": "scalar", "type": "Text", "cardinality": "one", "maxLength": 1024},
+        "description": {"kind": "scalar", "type": "Text", "cardinality": "one", "maxLength": 5000, "multiline": True},
+        "contentUrl": {"kind": "scalar", "type": "URL", "cardinality": "one", "maxLength": 2048},
+        "encodingFormat": {"kind": "scalar", "type": "Text", "cardinality": "one", "maxLength": 128},
         "uploadDate": {"kind": "scalar", "type": "DateTime", "cardinality": "one"},
         "creator": {"kind": "ref", "targets": ["Person"], "cardinality": "one"},
-        "license": {"kind": "scalar", "type": "URL", "cardinality": "one"},
+        "license": {"kind": "scalar", "type": "URL", "cardinality": "one", "maxLength": 2048},
     }
 
 REQUIRED_FIELDS = {"contentUrl"}
@@ -51,6 +52,9 @@ def _check_one(spec, value, path):
     if kind == "scalar":
         if not check_scalar(spec["type"], value):
             return [f'Field "{path}" must be a {spec["type"]}.']
+        max_length = spec.get("maxLength")
+        if max_length is not None and isinstance(value, str) and len(value) > max_length:
+            return [f'Field "{path}" must be at most {max_length} characters.']
     elif kind == "enum":
         if value not in spec["values"]:
             return [f'Field "{path}" must be one of: {", ".join(spec["values"])}.']
@@ -104,6 +108,28 @@ def validate(data, partial=False):
 def _now():
     now = datetime.now(timezone.utc)
     return now.strftime("%Y-%m-%dT%H:%M:%S.") + f"{now.microsecond // 1000:03d}Z"
+
+
+def sanitize(data):
+    """Field-aware input cleaning, run before validation and storage: each known
+    scalar string is normalized, stripped of control characters and trimmed, with
+    long-form (multiline) fields keeping their internal line breaks. Refs, embeds,
+    lists and other values fall back to the conservative property-blind sanitizer.
+    The body is cleaned in place: every key is left where it is — dangerous keys
+    (__proto__, ...) are deliberately untouched so validate() can reject the body,
+    rather than silently dropped here."""
+    if not isinstance(data, dict):
+        return data
+    for key in list(data.keys()):
+        if is_dangerous_key(key):
+            continue
+        value = data[key]
+        spec = FIELDS.get(key)
+        if spec is not None and spec["kind"] == "scalar" and isinstance(value, str):
+            data[key] = sanitize_string(value, spec.get("multiline", False))
+        else:
+            data[key] = deep_sanitize(value)
+    return data
 
 
 def _normalize_refs(data):
@@ -207,7 +233,7 @@ def embed_refs(item):
 
 def create(raw_data):
     with with_lock():
-        data = _normalize_refs(deep_sanitize(raw_data))
+        data = _normalize_refs(raw_data)
         items = read_collection(COLLECTION_FILE)
         now = _now()
         # Client data first, then system-controlled fields override it: a client
@@ -228,7 +254,7 @@ def update(id, raw_data):
         if index is None:
             return None
         current = items[index]
-        data = _normalize_refs(deep_sanitize(raw_data))
+        data = _normalize_refs(raw_data)
         updated = {**current, **data,
                    "@context": current.get("@context", "https://schema.org"),
                    "@type": current.get("@type", TYPE_NAME),

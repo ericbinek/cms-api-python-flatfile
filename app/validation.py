@@ -12,13 +12,22 @@ ISO_DATETIME_PATTERN = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,
 
 DANGEROUS_KEYS = {"__proto__", "constructor", "prototype"}
 
+# Control characters stripped from every string. The multiline variant keeps the
+# regular whitespace Tab (U+0009), Newline (U+000A) and Carriage Return (U+000D)
+# so long-form text can hold line breaks; the default variant removes those too.
+# Null bytes (U+0000) and the C1 block fall in both ranges and are always removed.
+CONTROL_CHARS_KEEP_WS = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f]")
+CONTROL_CHARS_ALL = re.compile(r"[\x00-\x1f\x7f-\x9f]")
+
 
 def is_dangerous_key(k):
     return k in DANGEROUS_KEYS
 
 
-def sanitize_string(v):
-    return unicodedata.normalize("NFC", v.replace("\x00", ""))
+def sanitize_string(v, multiline=False):
+    normalized = unicodedata.normalize("NFC", v)
+    pattern = CONTROL_CHARS_KEEP_WS if multiline else CONTROL_CHARS_ALL
+    return pattern.sub("", normalized).strip()
 
 
 def deep_sanitize(value):

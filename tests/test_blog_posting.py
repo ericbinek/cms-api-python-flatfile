@@ -129,6 +129,47 @@ class BlogPostingApiTest(unittest.TestCase):
         self.assertEqual(r["status"], 400)
         self.assertEqual(r["body"]["error"], "INVALID_JSON")
 
+    def test_leading_trailing_whitespace_trimmed_on_create(self):
+        payload = build_payload(self.server, ENTITY)
+        payload["headline"] = "  trimmed value  "
+        r = request_json(self.server, "POST", BASE, payload)
+        self.assertEqual(r["status"], 201, f"expected 201: {r['raw']}")
+        self.assertEqual(r["body"]["headline"], "trimmed value")
+
+    def test_control_characters_stripped_on_create(self):
+        payload = build_payload(self.server, ENTITY)
+        payload["headline"] = "clean\x00\x07ed"
+        r = request_json(self.server, "POST", BASE, payload)
+        self.assertEqual(r["status"], 201, f"expected 201: {r['raw']}")
+        self.assertEqual(r["body"]["headline"], "cleaned")
+
+    def test_value_over_max_length_rejected_with_400(self):
+        payload = build_payload(self.server, ENTITY)
+        payload["headline"] = "a" * 257
+        r = request_json(self.server, "POST", BASE, payload)
+        self.assertEqual(r["status"], 400)
+        self.assertEqual(r["body"]["error"], "VALIDATION_ERROR")
+
+    def test_value_at_max_length_accepted(self):
+        payload = build_payload(self.server, ENTITY)
+        payload["headline"] = "a" * 256
+        r = request_json(self.server, "POST", BASE, payload)
+        self.assertEqual(r["status"], 201, f"expected 201: {r['raw']}")
+
+    def test_multiline_field_description_keeps_newlines(self):
+        payload = build_payload(self.server, ENTITY)
+        payload["description"] = "first line\nsecond line"
+        r = request_json(self.server, "POST", BASE, payload)
+        self.assertEqual(r["status"], 201, f"expected 201: {r['raw']}")
+        self.assertEqual(r["body"]["description"], "first line\nsecond line")
+
+    def test_single_line_field_headline_strips_newlines(self):
+        payload = build_payload(self.server, ENTITY)
+        payload["headline"] = "first\nsecond"
+        r = request_json(self.server, "POST", BASE, payload)
+        self.assertEqual(r["status"], 201, f"expected 201: {r['raw']}")
+        self.assertEqual(r["body"]["headline"], "firstsecond")
+
     def test_get_by_id_embeds_author_object_list_stays_flat(self):
         payload = build_payload(self.server, ENTITY, partial=True)
         created = request_json(self.server, "POST", BASE, payload)["body"]

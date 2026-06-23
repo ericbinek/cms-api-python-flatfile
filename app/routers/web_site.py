@@ -104,7 +104,7 @@ def _handle_collection(handler, method, url, request_path, principal):
         if not access.can(role, ENTITY, "create"):
             cms_http.json_error(handler, cms_errors.forbidden(f'Role "{role}" may not create {ENTITY}.', request_path))
             return
-        body = cms_http.parse_body(handler)
+        body = model.sanitize(cms_http.parse_body(handler))
         readonly = access.readonly_violations(role, body)
         if readonly:
             cms_http.json_error(handler, cms_errors.validation([f'Fields are not writable: {", ".join(readonly)}.'], request_path))
@@ -142,7 +142,7 @@ def _handle_item(handler, method, item_id, request_path, principal):
         if not access.can(role, ENTITY, "update"):
             cms_http.json_error(handler, cms_errors.forbidden(f'Role "{role}" may not update {ENTITY}.', request_path))
             return
-        body = cms_http.parse_body(handler)
+        body = model.sanitize(cms_http.parse_body(handler))
         readonly = access.readonly_violations(role, body)
         if readonly:
             cms_http.json_error(handler, cms_errors.validation([f'Fields are not writable: {", ".join(readonly)}.'], request_path))
