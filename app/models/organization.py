@@ -1,6 +1,7 @@
 import functools
 from datetime import datetime, timezone
 
+from app.errors import DuplicateError
 from app.storage import read_collection, write_collection, with_lock
 from app.validation import (
     check_scalar,
@@ -33,6 +34,10 @@ FIELDS = {
 REQUIRED_FIELDS = {"name"}
 SEARCHABLE_FIELDS = {"name", "legalName", "description", "email", "telephone"}
 SORTABLE_FIELDS = {"dateCreated", "dateModified", "name", "legalName", "description", "url", "email", "telephone", "foundingDate"}
+
+# Properties whose combined value must be unique across the collection. Empty
+# when the entity allows duplicates.
+UNIQUE_KEY = []
 
 SYSTEM_FIELDS = {"id", "dateCreated", "dateModified", "@context", "@type"}
 
@@ -233,10 +238,31 @@ def embed_refs(item):
     return out
 
 
+def _violates_unique_key(items, candidate, exclude_id):
+    # A candidate collides when some other record shares every unique-key value.
+    # Comparison runs on already-sanitized, ref-normalized data, so equal values
+    # are in canonical form. Entities without a key never collide.
+    if not UNIQUE_KEY:
+        return False
+    for item in items:
+        if item.get("id") == exclude_id:
+            continue
+        if all(item.get(field) == candidate.get(field) for field in UNIQUE_KEY):
+            return True
+    return False
+
+
+def _duplicate_error():
+    fields = " and ".join(UNIQUE_KEY)
+    return DuplicateError([f"A {TYPE_NAME} with this {fields} already exists."])
+
+
 def create(raw_data):
     with with_lock():
         data = _normalize_refs(raw_data)
         items = read_collection(COLLECTION_FILE)
+        if _violates_unique_key(items, data, None):
+            raise _duplicate_error()
         now = _now()
         # Client data first, then system-controlled fields override it: a client
         # cannot spoof @context/@type/id/timestamps by sending them in the body.
@@ -263,6 +289,8 @@ def update(id, raw_data):
                    "id": current["id"],
                    "dateCreated": current["dateCreated"],
                    "dateModified": _now()}
+        if _violates_unique_key(items, updated, current["id"]):
+            raise _duplicate_error()
         items[index] = updated
         write_collection(COLLECTION_FILE, items)
         return updated

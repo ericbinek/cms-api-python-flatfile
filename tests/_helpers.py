@@ -192,10 +192,20 @@ def _plural(entity):
     return _re.sub(r"([A-Z])", r"-\1", entity).lstrip("-").lower() + "s"
 
 
+def _unique_value(type_, base):
+    # Gives each build a distinct value for a unique-key string field. Without
+    # this every payload would carry the same sample value and the second create
+    # in any multi-record test would trip duplicate detection. Ref key components
+    # are already unique because each is freshly created per build.
+    suffix = uuid.uuid4().hex
+    return f"{base}/{suffix}" if type_ == "URL" else f"{base}-{suffix}"
+
+
 def build_payload(server, entity, partial=False):
     # System and internal fields (READONLY_FIELDS) are never sent — they are not
     # client writable and would be rejected with 400.
     mod = MODELS[entity]
+    key = set(mod.UNIQUE_KEY)
     payload = {}
     for name, spec in mod.FIELDS.items():
         if name in READONLY_FIELDS:
@@ -206,6 +216,8 @@ def build_payload(server, entity, partial=False):
             value = make_dep(server, spec["targets"][0])
         else:
             value = _sample_one(spec)
+            if name in key and spec["kind"] == "scalar" and isinstance(value, str):
+                value = _unique_value(spec["type"], value)
         payload[name] = [value] if spec["cardinality"] == "many" else value
     return payload
 

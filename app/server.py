@@ -99,6 +99,10 @@ class CmsHandler(BaseHTTPRequestHandler):
             cms_http.json_error(self, cms_errors.payload_too_large(request_path))
         except cms_http.UnsupportedMediaTypeError:
             cms_http.json_error(self, cms_errors.unsupported_media_type(request_path))
+        except cms_errors.DuplicateError as e:
+            # A unique-key collision is reported in the existing validation
+            # envelope (400), not a new error type.
+            cms_http.json_error(self, cms_errors.validation(e.details, request_path))
         except (json.JSONDecodeError, UnicodeDecodeError):
             cms_http.json_error(self, cms_errors.invalid_json(request_path))
         except Exception as e:

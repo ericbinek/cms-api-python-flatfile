@@ -208,6 +208,31 @@ class BlogPostingApiTest(unittest.TestCase):
         self.assertIsInstance(embedded[0], dict)
         self.assertEqual(embedded[0]["@type"], "ImageObject")
 
+    def test_duplicate_unique_key_on_create_rejected(self):
+        payload = build_payload(self.server, ENTITY)
+        first = request_json(self.server, "POST", BASE, payload)
+        self.assertEqual(first["status"], 201, f"first create expected 201, got {first['status']}: {first['raw']}")
+        # Re-posting the same payload reuses the same key values, so it must collide.
+        second = request_json(self.server, "POST", BASE, payload)
+        self.assertEqual(second["status"], 400)
+        self.assertEqual(second["body"]["error"], "VALIDATION_ERROR")
+
+    def test_update_without_changing_unique_key_succeeds(self):
+        item = self._create()
+        key = ["url"]
+        echo = {f: item.get(f) for f in key}
+        r = request_json(self.server, "PUT", f"{BASE}/{item['id']}", echo)
+        self.assertEqual(r["status"], 200, f"self-update expected 200, got {r['status']}: {r['raw']}")
+
+    def test_update_to_collide_with_other_unique_key_rejected(self):
+        a = self._create()
+        b = self._create()
+        key = ["url"]
+        collide = {f: a.get(f) for f in key}
+        r = request_json(self.server, "PUT", f"{BASE}/{b['id']}", collide)
+        self.assertEqual(r["status"], 400)
+        self.assertEqual(r["body"]["error"], "VALIDATION_ERROR")
+
 
 if __name__ == "__main__":
     unittest.main()

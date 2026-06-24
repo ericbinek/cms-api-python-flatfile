@@ -1,3 +1,12 @@
+class DuplicateError(Exception):
+    """A unique-key collision raised from a model. Carries the response details
+    so the server can report it in the existing validation envelope (400)."""
+
+    def __init__(self, details):
+        super().__init__("Unique key collision.")
+        self.details = details
+
+
 def _build(status, error, message, details=None, path=""):
     return {"status": status, "error": error, "message": message, "details": details or [], "path": path}
 
