@@ -95,7 +95,11 @@ class _Server:
             with open(os.path.join(self.data_dir, "accounts.json"), "w", encoding="utf-8") as f:
                 json.dump([_account_record(a) for a in seed], f, indent=2, ensure_ascii=False)
 
-        proc_env = {**os.environ, "PORT": str(self.port), "DATA_DIR": self.data_dir, "PYTHONPATH": str(REPO_ROOT)}
+        # Default the rate limits high so the conformance suite never trips them
+        # — all requests share one process and one loopback IP. The rate-limit
+        # suite sets small values through env to exercise the limiter on purpose.
+        proc_env = {**os.environ, "PORT": str(self.port), "DATA_DIR": self.data_dir, "PYTHONPATH": str(REPO_ROOT),
+                    "RATE_LIMIT_READ_PER_MINUTE": "1000000", "RATE_LIMIT_WRITE_PER_MINUTE": "1000000"}
         proc_env.update(env or {})
         self.proc = subprocess.Popen(
             [sys.executable, "-m", "app"],

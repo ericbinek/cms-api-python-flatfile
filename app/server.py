@@ -8,6 +8,7 @@ from urllib.parse import urlparse
 from app import http as cms_http
 from app import errors as cms_errors
 from app import auth as cms_auth
+from app import rate_limit as cms_rate_limit
 from app.models import account as account_model
 from app.routers import auth as auth_router
 from app.routers import blog_posting as blog_posting_router
@@ -66,6 +67,14 @@ class CmsHandler(BaseHTTPRequestHandler):
         method = self.command
         request_path = f"{method} {path}"
         try:
+            # Rate limit before anything else, so every request counts against
+            # the per-IP window. The peer address is the only trusted source — a
+            # forwarded header would be client-spoofable and these targets run
+            # without a proxy.
+            retry_after = cms_rate_limit.check(self.client_address[0], method)
+            if retry_after is not None:
+                cms_http.json_error(self, cms_errors.too_many_requests(request_path), {"Retry-After": str(retry_after)})
+                return
             if method in ("TRACE", "CONNECT"):
                 cms_http.json_error(self, cms_errors.route_not_found(request_path))
                 return

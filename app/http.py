@@ -108,5 +108,5 @@ def json_response(handler, status, data, extra_headers=None):
     handler.wfile.write(body)
 
 
-def json_error(handler, error):
-    json_response(handler, error["status"], error)
+def json_error(handler, error, extra_headers=None):
+    json_response(handler, error["status"], error, extra_headers)

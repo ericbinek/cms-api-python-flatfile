@@ -43,6 +43,10 @@ def method_not_allowed(allowed, path):
     return _build(405, "METHOD_NOT_ALLOWED", f"Method not allowed. Allowed: {', '.join(allowed)}.", [], path)
 
 
+def too_many_requests(path):
+    return _build(429, "TOO_MANY_REQUESTS", "Rate limit exceeded. Try again later.", [], path)
+
+
 def precondition_failed(path):
     return _build(412, "PRECONDITION_FAILED", "ETag does not match current resource state.", [], path)
 
