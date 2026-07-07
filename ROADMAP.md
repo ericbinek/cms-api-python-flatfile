@@ -10,16 +10,16 @@ This is a work-in-progress project (v0.6.0). The roadmap is deliberately loose, 
 - Reference embedding on single-resource reads
 - Type-aware sorting, pagination, filtering, and ETag caching
 - A named, consistent error format with content-type enforcement
+- Session-based authentication with per-role permissions and a publication workflow
+- Per-IP rate limiting and field-aware input sanitization
 
 ## Planned
 
 - Referential integrity on writes, so a reference cannot point at a missing record
 - More entity types as the vocabulary grows
-- Duplicate detection on create
 
 ## Considering
 
-- A framework-based variant of this server
-- Rate limiting
+- Database-backed storage variants
 
 Have a need or an idea? Open an issue. This is built in public and feedback shapes the order.
