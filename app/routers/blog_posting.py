@@ -170,7 +170,12 @@ def _handle_item(handler, method, item_id, request_path, principal):
             if not access.transition_allowed(ENTITY, current.get(status), body[status], role):
                 cms_http.json_error(handler, cms_errors.forbidden(f'Status transition {current.get(status)} -> {body[status]} is not allowed for role "{role}".', request_path))
                 return
+        # update() returns None when the record vanished between the lookup
+        # above and the write (concurrent delete) -- a 404, same as the lookup.
         updated = model.update(item_id, body)
+        if updated is None:
+            cms_http.json_error(handler, cms_errors.not_found(model.TYPE_NAME, request_path))
+            return
         cms_http.json_response(handler, 200, access.strip_fields(role, updated), etag=model.etag_of(updated))
         return
 
