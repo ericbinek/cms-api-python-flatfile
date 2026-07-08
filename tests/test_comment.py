@@ -191,6 +191,29 @@ class CommentApiTest(unittest.TestCase):
         got = request_json(self.server, "GET", f"{BASE}/{created['id']}")["body"]
         self.assertEqual(got["author"], dangling)
 
+    def test_fresh_etag_from_get_satisfies_if_match_on_put_then_delete(self):
+        payload = build_payload(self.server, ENTITY, partial=True)
+        created = request_json(self.server, "POST", BASE, payload)["body"]
+
+        got = request_json(self.server, "GET", f"{BASE}/{created['id']}")
+        self.assertEqual(got["status"], 200)
+        etag = got["headers"].get("etag")
+        self.assertTrue(etag)
+
+        # The observable ETag names the record version: a conditional GET with it is a 304.
+        not_modified = request_json(self.server, "GET", f"{BASE}/{created['id']}", headers={"If-None-Match": etag})
+        self.assertEqual(not_modified["status"], 304)
+
+        # The honest fresh path: PUT with the ETag the GET handed out succeeds.
+        put = request_json(self.server, "PUT", f"{BASE}/{created['id']}", {}, headers={"If-Match": etag})
+        self.assertEqual(put["status"], 200, f"PUT with fresh If-Match expected 200, got {put['status']}: {put['raw']}")
+
+        # The PUT response carries the new record version; DELETE with it succeeds.
+        put_etag = put["headers"].get("etag")
+        self.assertTrue(put_etag)
+        deleted = request_json(self.server, "DELETE", f"{BASE}/{created['id']}", headers={"If-Match": put_etag})
+        self.assertEqual(deleted["status"], 204)
+
 
 if __name__ == "__main__":
     unittest.main()

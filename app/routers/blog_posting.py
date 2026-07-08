@@ -114,7 +114,7 @@ def _handle_collection(handler, method, url, request_path, principal):
             cms_http.json_error(handler, cms_errors.validation(errs, request_path))
             return
         created = model.create(access.apply_create_defaults(ENTITY, body, principal["accountId"]))
-        cms_http.json_response(handler, 201, access.strip_fields(role, created), extra_headers={"Location": f"{BASE}/{created['id']}"})
+        cms_http.json_response(handler, 201, access.strip_fields(role, created), extra_headers={"Location": f"{BASE}/{created['id']}"}, etag=model.etag_of(created))
         return
     cms_http.json_error(handler, cms_errors.method_not_allowed(["GET", "POST"], request_path))
 
@@ -135,7 +135,9 @@ def _handle_item(handler, method, item_id, request_path, principal):
         if item is None or not access.is_visible(role, ENTITY, item):
             cms_http.json_error(handler, cms_errors.not_found(model.TYPE_NAME, request_path))
             return
-        cms_http.json_response(handler, 200, access.strip_fields(role, model.embed_refs(item)))
+        # The ETag names the stored record's version, not the role- and
+        # embedding-shaped body -- it must satisfy a later If-Match.
+        cms_http.json_response(handler, 200, access.strip_fields(role, model.embed_refs(item)), etag=model.etag_of(item))
         return
 
     if method == "PUT":
@@ -169,7 +171,7 @@ def _handle_item(handler, method, item_id, request_path, principal):
                 cms_http.json_error(handler, cms_errors.forbidden(f'Status transition {current.get(status)} -> {body[status]} is not allowed for role "{role}".', request_path))
                 return
         updated = model.update(item_id, body)
-        cms_http.json_response(handler, 200, access.strip_fields(role, updated))
+        cms_http.json_response(handler, 200, access.strip_fields(role, updated), etag=model.etag_of(updated))
         return
 
     if method == "DELETE":

@@ -82,14 +82,19 @@ def _generate_etag(body_bytes):
     return '"' + hashlib.sha256(body_bytes).hexdigest()[:16] + '"'
 
 
-def json_response(handler, status, data, extra_headers=None):
+# Single-record responses pass the record's canonical ETag (the stored record's
+# version, the same value If-Match is checked against). Without one the ETag
+# falls back to a hash of the response body; lists and errors have no single
+# record version.
+def json_response(handler, status, data, extra_headers=None, etag=None):
     if status == 204:
         handler.send_response(204)
         _send_cors_headers(handler)
         handler.end_headers()
         return
     body = json.dumps(data, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
-    etag = _generate_etag(body)
+    if etag is None:
+        etag = _generate_etag(body)
     if_none_match = handler.headers.get("If-None-Match")
     if if_none_match and (if_none_match == etag or if_none_match == "*"):
         handler.send_response(304)
